@@ -60,16 +60,6 @@ def spectra_processing(spectra):
 	return(dfs)
 ################################################### this function will update the reference files 
 
-def db_reference(df, reference, i): #### this is an old function, use the one below called mutcheck!
-	i = int(i)
-	index_df = np.arange(df.start_pos[i]-1, df.templen[i]-1) ## get index from parent for loop
-	reference.loc[index_df, 'total_occurences'] = reference.loc[index_df, 'total_occurences']+1 # if index from spectra is present in reference index add 1 each time to all index positions
-	ref_index = reference.ix[index_df, ('refseq')] ## get the reference index peptides
-	df_pep = pd.Series(list(df.tag_rem_pep[i]), index=ref_index.index) ### get the spectra index peptides
-	ref_mutindex = ref_index.index[ref_index != list(df.tag_rem_pep[i])] ## if df spectra index peptides are not equal to the reference index peptides, get that ref_mut index
-	reference.loc[ref_mutindex, ('mutated_occurence')] = reference.loc[ref_mutindex, ('mutated_occurence')] +1 ## if there appears to be a mutation add 1 each time it finds one
-	reference.loc[ref_mutindex, ('mutated_AA')] = df_pep[df_pep != ref_index] ### finally retreive the mutated pos from spectra index peptide and add it into mutated pos in the reference file
-
 ####################
 def mutcheck(spectraDF, reference, stringquery):
 	tempdf = spectraDF[spectraDF['protein_name'].str.contains(stringquery)]
@@ -301,3 +291,15 @@ arp2_mut_raw_counts=arp2.loc[arp2['keys'].isin(common_keys)]
 #############Debugging !!!!!!! ####### Debugging 
 arp2_mut_raw_counts=arp2_mut_raw_counts.sort_values(['keys'])
 pan2_mut_raw_counts=pan2_mut_raw_counts.sort_values(['keys'])
+
+###### old function debugging !!
+def db_reference(df, reference, i): #### this is an old function, use the one below called mutcheck!
+	i = int(i)
+	index_df = np.arange(df.start_pos[i]-1, df.templen[i]-1) ## get index from parent for loop
+	reference.loc[index_df, 'total_occurences'] = reference.loc[index_df, 'total_occurences']+1 # if index from spectra is present in reference index add 1 each time to all index positions
+	ref_index = reference.ix[index_df, ('refseq')] ## get the reference index peptides
+	df_pep = pd.Series(list(df.tag_rem_pep[i]), index=ref_index.index) ### get the spectra index peptides
+	ref_mutindex = ref_index.index[ref_index != list(df.tag_rem_pep[i])] ## if df spectra index peptides are not equal to the reference index peptides, get that ref_mut index
+	reference.loc[ref_mutindex, ('mutated_occurence')] = reference.loc[ref_mutindex, ('mutated_occurence')] +1 ## if there appears to be a mutation add 1 each time it finds one
+	reference.loc[ref_mutindex, ('mutated_AA')] = df_pep[df_pep != ref_index] ### finally retreive the mutated pos from spectra index peptide and add it into mutated pos in the reference file
+
