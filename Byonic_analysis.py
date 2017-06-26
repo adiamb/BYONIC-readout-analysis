@@ -177,7 +177,7 @@ refprotname= ['PB2', 'HA', 'NA', 'MA1', 'NP']
  'ADE29097.1 neuraminidase ',
  'ADE29098.1 matrix protein 1 ',
  'ADE29096.1 nucleocapsid protein ']
-
+#### change the long protein name to short ones for e.g NucleoProtein > NP etc.
 arp.loc[:, 'prot'] = 'NaN'
 pan.loc[:, 'prot'] = 'NaN'
 for i, j in enumerate(refid): 
@@ -185,51 +185,53 @@ for i, j in enumerate(refid):
 	pan.loc[pan.strain_protein.str.contains(j), ('prot')] = refprotname[i]
 
 
-## drop uneceassay cols 
+## drop uneceassary cols 
 arp2=arp.drop(['Unnamed: 0', 'strain_protein'], axis=1)
 pan2=pan.drop(['Unnamed: 0', 'strain_protein'], axis=1)
-#### add keys column to these files
+#### add keys column to these files by combining the proteinname and the position of that peptide in the ref protein
 pan2.loc[:,('keys')]=[str(pan2.prot[i]) + '_' + str(pan2.position[i]) for i in xrange(0, len(pan2))]
 arp2.loc[:,('keys')]=[str(arp2.prot[i]) + '_' + str(arp2.position[i]) for i in xrange(0, len(arp2))]
 
+######## groupby pandas if a rows have the same common 'prot','position', 'refseq', 'mutated_AA' then mean the total_occurences', 'mutated_occurence', 'mut_log_prob'
 
 pan2_grp2=pan2[['prot','position', 'refseq','mutated_AA','total_occurences', 'mutated_occurence', 'mut_log_prob']].groupby(['prot','position', 'refseq', 'mutated_AA']).mean()
 pan2_reduced=pan2_grp2.reset_index()
+#### further if certain rows satisfy conditions total_occurences > 0, mutated_occurence > = 3 and a mut_log prob of > 2, take these as valid rows 
 pan2_final=pan2_reduced.loc[(pan2_reduced['total_occurences'] != 0) & (pan2_reduced['mutated_occurence'] >= 3) & (pan2_reduced['mut_log_prob'] > 2)]
 pan2_sort=pan2_final.sort_values(['mutated_occurence'], ascending=False)
 #pan2_sort.loc[:, ('percentage')]=(pan2_sort.mutated_occurence/pan2_sort.total_occurences)*100
 
 
-
+## do the same with arpanrix
 arp2_grp2=arp2[['prot','position', 'refseq','mutated_AA','total_occurences', 'mutated_occurence', 'mut_log_prob']].groupby(['prot','position', 'refseq', 'mutated_AA']).mean()
 arp2_reduced=arp2_grp2.reset_index()
 arp2_final=arp2_reduced.loc[(arp2_reduced['total_occurences'] != 0) & (arp2_reduced['mutated_occurence'] >= 3) & (arp2_reduced['mut_log_prob'] > 2)]
 arp2_sort=arp2_final.sort_values(['mutated_occurence'], ascending=False)
 #arp2_sort.loc[:, ('percentage')]=(arp2_sort.mutated_occurence/arp2_sort.total_occurences)*100
 
-### reset index on these files
+### reset index on these files but keep the column structure
 pan2_sort.reset_index(drop=True, inplace=True)
 arp2_sort.reset_index(drop=True, inplace=True)
 
-#### get all key mutations from each of the vaccine
+#### get all key mutations from each of the vaccine for e.g HA 146 becomes HA_146
 pan2_keys = [str(pan2_sort.prot[i]) + '_' + str(pan2_sort.position[i]) for i in xrange(0, len(pan2_sort))]
-
 arp2_keys = [str(arp2_sort.prot[i]) + '_' + str(arp2_sort.position[i]) for i in xrange(0, len(arp2_sort))]
-common_keys= set(pan2_keys + arp2_keys)
+common_keys= set(pan2_keys + arp2_keys) #### from the selected rows in above sort files pan2_sort and arp2_sort, make a big list containing common unique keys
 ### make these keys from the orginal database file *_reduced.
 pan2_reduced.loc[:, ('keys')] = [str(pan2_reduced.prot[i]) + '_' + str(pan2_reduced.position[i]) for i in xrange(0, len(pan2_reduced))]
 arp2_reduced.loc[:, ('keys')] = [str(arp2_reduced.prot[i]) + '_' + str(arp2_reduced.position[i]) for i in xrange(0, len(arp2_reduced))]
 
-
+###get all the positions from the main DB *_reduced present in the common keys
 panf=pan2_reduced[pan2_reduced['keys'].isin(common_keys)]
 arpf=arp2_reduced[arp2_reduced['keys'].isin(common_keys)]
-
+#### here we find that certain mutations maybe different across same vaccine lots (for e.g within pandemrix at same position , batch1 might have a mutation at HA 146 as D whereas batch might have mutatation ar HA 146 as F)
+### further, if this is the case this will showup in above at groupby as two rows because of the difference in mutated_AA. we are merely gathering all these empty keys and removing them
 arpf2=arpf.index[(arpf.duplicated(['keys'], keep=False)) & (arpf.mutated_AA.str.contains('Nan'))]
 panf2=panf.index[(panf.duplicated(['keys'], keep=False)) & (panf.mutated_AA.str.contains('Nan'))]
-
+### drop these indexes from the mutated files arp_mut/pan_mut
 arp_mut=arpf.drop(arpf2, axis=0)
 pan_mut=panf.drop(panf2, axis=0)
-
+#### merge the tow vaccines on keys and get suffixes for each of them.
 all_mut=pd.merge(arp_mut, pan_mut, on='keys', how='outer', suffixes=['_ARP', '_PAN'])
 #all_mut.to_csv('/Users/adityaambati/Desktop/All_mutations.csv')
 
@@ -237,9 +239,9 @@ all_mut=pd.merge(arp_mut, pan_mut, on='keys', how='outer', suffixes=['_ARP', '_P
 #all_mut[(all_mut.mutated_occurence_ARP >= 3) & (all_mut.mutated_occurence_PAN >=3)]
 
 #all_mut.loc[(all_mut.mut_log_prob_ARP >= 2) & (all_mut.mut_log_prob_PAN >=2)]
-
+##make a copy of the file
 all_mut2 = all_mut
-
+#### calculate the ratios mut/total *100 - gives %
 all_mut2.loc[:, ('mutated_occurence_ARP')] = np.round(all_mut2.mutated_occurence_ARP)
 all_mut2.loc[:, ('mutated_occurence_PAN')] = np.round(all_mut2.mutated_occurence_PAN)
 all_mut2.loc[:, ('total_occurences_ARP')] = np.round(all_mut2.total_occurences_ARP)
@@ -255,7 +257,7 @@ all_mut3.loc[:, ('mut_pos_PAN')] = [all_mut3.refseq_PAN[i] + ' > ' + all_mut3.mu
 all_mut3.loc[:, ('mut_pos_ARP')] = [all_mut3.refseq_ARP[i] + ' > ' + all_mut3.mutated_AA_ARP[i] for i in xrange(0, len(all_mut3))]
 
 
-
+#############Debugging !!!!!!!
 ### debugging and verifying mutations in the main DF raw files
 pan_raw=pd.concat(pan_tryp_dfs, ignore_index=True)
 arp_raw=pd.concat(arp_tryp_dfs, ignore_index=True)
