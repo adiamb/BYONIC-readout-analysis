@@ -21,7 +21,7 @@ pan_chymo = ['AFLSA208A_PAN_CHYMO.csv', 'AFLSFDA280_PAN_CHYMO.csv', 'AFLSA174AA_
 ######### make a list of references influenza proteins used in the MS analysis
 ###############HA 				NP 			NA 				M1			PB2
 references =['ADE29095.1', 'ADE29096.1', 'ADE29097.1', 'ADE29098.1', 'ADE29092.1'] ## to add in more id of references 
-### define helper functions
+### define subroutines 
 def reference_retreive(references): ## this function will take alist and output a list with Dataframes for each individual peptide in a protein
 	reference_proteins =[]
 	for i in references:
