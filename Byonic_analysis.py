@@ -257,28 +257,18 @@ all_mut3.loc[:, ('mut_pos_PAN')] = [all_mut3.refseq_PAN[i] + ' > ' + all_mut3.mu
 all_mut3.loc[:, ('mut_pos_ARP')] = [all_mut3.refseq_ARP[i] + ' > ' + all_mut3.mutated_AA_ARP[i] for i in xrange(0, len(all_mut3))]
 
 
-#############Debugging !!!!!!!
-### debugging and verifying mutations in the main DF raw files
-pan_raw=pd.concat(pan_tryp_dfs, ignore_index=True)
-arp_raw=pd.concat(arp_tryp_dfs, ignore_index=True)
-
-
-
-arp_raw.loc[(arp_raw.protein_name.str.contains('>HA-|ACQ55359.1|ADE29085.1|hema')) & (arp_raw.start_pos == 137)]
-pan_raw.loc[(pan_raw.protein_name.str.contains('>HA-|ACQ55359.1|ADE29085.1|hema')) & (pan_raw.start_pos == 137)]
-
-
-### reach into the reference seq to get 20 aa around the mutations
+########## get 10 AA before and after the mutated motif from the reference file
+### reach into the reference seq to get 20 aa around the mutations from above line 109
 HA_seq=''.join(ref_proteins[0].refseq.tolist())
 NP_seq = ''.join(ref_proteins[1].refseq.tolist())
 NA_seq = ''.join(ref_proteins[2].refseq.tolist())
 MA_seq = ''.join(ref_proteins[3].refseq.tolist())
 PB2_seq = ''.join(ref_proteins[4].refseq.tolist())
-
+### make a dirty DF of these proteins 
 all_seq=pd.DataFrame([HA_seq, NP_seq, NA_seq, MA_seq, PB2_seq], columns=['seq'])
-all_seq.loc[:, ('prots')] = ['HA', 'NP', 'NA', 'MA1', 'PB2']
-
-all_mut3.loc[:, ('20AA_mut_ARP')] = 'NaN'
+all_seq.loc[:, ('prots')] = ['HA', 'NP', 'NA', 'MA1', 'PB2'] ### assign the protein names to them
+### write a loop to reach into the all_seq to get the sequences
+all_mut3.loc[:, ('20AA_mut_ARP')] = 'NaN' ## intialize the mut and ref_columns
 all_mut3.loc[:, ('20AA_mut_PAN')] = 'NaN'
 all_mut3.loc[:, ('20AA_X179A')] = 'NaN'
 
@@ -286,17 +276,28 @@ all_mut3.loc[:, ('20AA_X179A')] = 'NaN'
 for i in xrange(0, len(all_mut3)):
 	pos = all_mut3.position_ARP[i]-1
 	refprot = ''.join(all_seq.loc[all_seq.prots.str.contains(all_mut3.prot_ARP[i]), ('seq')].tolist())
-	print refprot[pos-10:pos] + '['+all_mut3.mut_pos_ARP[i]+']' + refprot[pos+1:pos+10], refprot[pos-10:pos] + '['+all_mut3.mut_pos_PAN[i]+']' + refprot[pos+1:pos+10], refprot[pos-10:pos+10]
+	#print refprot[pos-10:pos] + '['+all_mut3.mut_pos_ARP[i]+']' + refprot[pos+1:pos+10], refprot[pos-10:pos] + '['+all_mut3.mut_pos_PAN[i]+']' + refprot[pos+1:pos+10], refprot[pos-10:pos+10]
 	all_mut3.loc[i, ('20AA_mut_ARP')] = refprot[pos-10:pos] + '['+all_mut3.mut_pos_ARP[i]+']' + refprot[pos+1:pos+10]
 	all_mut3.loc[i, ('20AA_mut_PAN')] = refprot[pos-10:pos] + '['+all_mut3.mut_pos_PAN[i]+']' + refprot[pos+1:pos+10]
 	all_mut3.loc[i, ('20AA_X179A')] = refprot[pos-10:pos+10]
 
 
+
+#### write the file to disk
+all_mut3.to_csv('TRYPSIN_mutated_counts.csv', index=False)
+#############Debugging !!!!!!! ####### Debugging 
+### debugging and verifying mutations in the main DF raw files
+pan_raw=pd.concat(pan_tryp_dfs, ignore_index=True)
+arp_raw=pd.concat(arp_tryp_dfs, ignore_index=True)
+
+
+#############Debugging !!!!!!! ####### Debugging 
+arp_raw.loc[(arp_raw.protein_name.str.contains('>HA-|ACQ55359.1|ADE29085.1|hema')) & (arp_raw.start_pos == 137)]
+pan_raw.loc[(pan_raw.protein_name.str.contains('>HA-|ACQ55359.1|ADE29085.1|hema')) & (pan_raw.start_pos == 137)]
 ################### go to orginal DB files and retreive raw counts
 pan2_mut_raw_counts=pan2.loc[pan2['keys'].isin(common_keys)]
 arp2_mut_raw_counts=arp2.loc[arp2['keys'].isin(common_keys)]
 
-
+#############Debugging !!!!!!! ####### Debugging 
 arp2_mut_raw_counts=arp2_mut_raw_counts.sort_values(['keys'])
 pan2_mut_raw_counts=pan2_mut_raw_counts.sort_values(['keys'])
-
